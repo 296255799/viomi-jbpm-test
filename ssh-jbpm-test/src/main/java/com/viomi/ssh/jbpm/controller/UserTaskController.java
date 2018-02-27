@@ -142,8 +142,9 @@ public class UserTaskController {
 	}
 	
 	protected String getAuthUser() {
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-	    String userId = auth.getName();
+//		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+//	    String userId = auth.getName();
+	    String userId = "fd";
 	    
 	    return userId;
 	}

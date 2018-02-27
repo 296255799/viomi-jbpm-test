@@ -74,10 +74,10 @@ public class ProcessInstanceController
     }
     
     @RequestMapping(value = "/start", method = RequestMethod.POST)
-    public String startProcessInstance(@RequestParam String deploymentId, ModelMap model)
+    public String startProcessInstance(@RequestParam String deploymentId, ModelMap model,@RequestParam String processid)
     {
         System.out.println("start ---------------->");
-        String processid = "test.flow";
+//        String processid = "test.flow";
         Long ird = processService.startProcess(deploymentId, processid);
         System.out.println("end ---------------->");
         System.out.println(">>>>>>>>>>>" + ird);
