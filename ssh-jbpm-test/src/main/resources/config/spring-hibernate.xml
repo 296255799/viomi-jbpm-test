@@ -16,37 +16,116 @@
 	<context:property-placeholder location="classpath:/jdbc.properties" />
 
 	<!--配置数据源 -->
-	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+	<!-- <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
 		destroy-method="close">
 		<property name="driverClass" value="${jdbc.driver}" />
-		<!-- 数据库连接驱动 -->
+		数据库连接驱动
 		<property name="jdbcUrl" value="${jdbc.url}" />
-		<!-- 数据库地址 -->
+		数据库地址
 		<property name="user" value="${jdbc.username}" />
-		<!-- 用户名 -->
+		用户名
 		<property name="password" value="${jdbc.password}" />
-		<!-- 密码 -->
+		密码
 		<property name="maxPoolSize" value="40" />
-		<!-- 最大连接数 -->
+		最大连接数
 		<property name="minPoolSize" value="1" />
-		<!-- 最小连接数 -->
+		最小连接数
 		<property name="initialPoolSize" value="10" />
-		<!-- 初始化连接池内的数据库连接 -->
+		初始化连接池内的数据库连接
 		<property name="maxIdleTime" value="20" />
-		<!-- 最大空闲时间 -->
-	</bean>
+		最大空闲时间
+	</bean> -->
+
+	    <!-- 两个数据源的功用配置，方便下面直接引用 -->
+     <bean id="abstractXADataSource" class="com.atomikos.jdbc.AtomikosDataSourceBean" init-method="init" 
+             destroy-method="close" abstract="true"> 
+        <property name="xaDataSourceClassName" value="com.mysql.jdbc.jdbc2.optional.MysqlXADataSource"/> 
+        <property name="poolSize" value="10" /> 
+        <property name="minPoolSize" value="10"/> 
+        <property name="maxPoolSize" value="30"/> 
+        <property name="borrowConnectionTimeout" value="60"/>  <!--获取连接失败重新获等待最大时间，在这个时间内如果有可用连接，将返回-->
+        <property name="reapTimeout" value="20"/> <!--最大获取数据时间，如果不设置这个值，Atomikos使用默认的5分钟，那么在处理大批量数据读取的时候，一旦超过5分钟，就会抛出类似 Resultset is close 的错误.-->        
+        <property name="maxIdleTime" value="60"/>    <!--最大闲置时间，超过最小连接池连接的连接将将关闭-->
+        <property name="maintenanceInterval" value="60" />  <!--连接回收时间-->    
+        <property name="loginTimeout" value="60" />     <!--java数据库连接池，最大可等待获取datasouce的时间-->
+        <property name="logWriter" value="60"/>
+        <property name="testQuery">
+            <value>select 1</value>
+        </property>
+
+    </bean> 
+    <!-- 配置第一个数据源 -->
+    <bean id="dataSource" parent="abstractXADataSource">
+         <!-- value只要两个数据源不同就行，随便取名 -->
+        <property name="uniqueResourceName" value="mysql/sitestone" />
+        <property name="xaDataSourceClassName"
+            value="com.mysql.jdbc.jdbc2.optional.MysqlXADataSource" />
+        <property name="xaProperties">
+            <props>
+                <prop key="URL">${jdbc.url}</prop>
+                <prop key="user">${jdbc.username}</prop>
+                <prop key="password">${jdbc.password}</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- 配置第二个数据源-->
+    <bean id="dataSourceB" parent="abstractXADataSource">
+        <!-- value只要两个数据源不同就行，随便取名 -->
+        <property name="uniqueResourceName" value="mysql/sitesttwo" />
+        <property name="xaDataSourceClassName"
+            value="com.mysql.jdbc.jdbc2.optional.MysqlXADataSource" />
+        <property name="xaProperties">
+            <props>
+                <prop key="URL">${jdbc.url}</prop>
+                <prop key="user">${jdbc.username}</prop>
+                <prop key="password">${jdbc.password}</prop>
+            </props>
+        </property>
+    </bean>
+
+
+    <bean id="atomikosTransactionManager" class="com.atomikos.icatch.jta.UserTransactionManager"
+        init-method="init" destroy-method="close">
+        <description>UserTransactionManager</description>
+        <property name="forceShutdown">
+            <value>true</value>
+        </property>
+    </bean>
+
+    <bean id="atomikosUserTransaction" class="com.atomikos.icatch.jta.UserTransactionImp">
+        <property name="transactionTimeout" value="300" />
+    </bean>
+
+
+    <bean id="transactionManager"
+        class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="transactionManager">
+            <ref bean="atomikosTransactionManager" />
+        </property>
+        <property name="userTransaction">
+            <ref bean="atomikosUserTransaction" />
+        </property>
+    </bean>
+
+    <bean id="transactionTemplate"
+        class="org.springframework.transaction.support.TransactionTemplate">
+        <property name="transactionManager">
+            <ref bean="transactionManager" />
+        </property>
+    </bean> 
 
 	<!--配置session工厂 -->
 	<bean id="sessionFactory"
 		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />
 		<property name="packagesToScan" value="com.viomi.xxx.jbpm.entity" />
-		<!-- <property name="jtaTransactionManager" ref="transactionManager" /> -->
+		<property name="jtaTransactionManager" ref="transactionManager" />
 
 		<property name="hibernateProperties">
 			<props>
 				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop> <!-- hibernate根据实体自动生成数据库表 -->
-				<prop key="hibernate.dialect">${hibernate.dialect}</prop>  <!--  指定数据库方言 -->
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>   <!-- 指定数据库方言 -->
 				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>   <!--   在控制台显示执行的数据库操作语句 -->
 				<prop key="hibernate.format_sql">${hibernate.format_sql}</prop>   <!--   在控制台显示执行的数据哭操作语句（格式） -->
 			</props>
@@ -56,9 +135,9 @@
 
 
 	<!-- 事物管理器配置 -->
-	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager"> 
+<!-- 	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager"> 
 		<property name="dataSource" ref="dataSource" /> 
-	</bean>
+	</bean> -->
 
 	<bean id="entityManagerFactory"
 		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean"

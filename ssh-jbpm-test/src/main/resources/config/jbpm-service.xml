@@ -39,6 +39,7 @@
   
   <bean id="transactionCmdService" class="org.jbpm.shared.services.impl.TransactionalCommandService">
     <constructor-arg name="emf" ref="entityManagerFactory"></constructor-arg>
+    <constructor-arg name="txm" ref="kieTransactionManager"></constructor-arg>
   </bean>
   
   <bean id="runtimeDataService" class="org.jbpm.kie.services.impl.RuntimeDataServiceImpl">
@@ -78,6 +79,11 @@
   <bean id="userTaskService" class="org.jbpm.kie.services.impl.UserTaskServiceImpl" depends-on="deploymentService">
     <property name="dataService" ref="runtimeDataService"/>
     <property name="deploymentService" ref="deploymentService"/>
+  </bean>
+
+
+  <bean id="kieTransactionManager" class="org.kie.spring.persistence.KieSpringTransactionManager">
+  	 <constructor-arg name="ptm" ref="transactionManager"></constructor-arg>
   </bean>
 
 <!--   <bean id="executorService" class="org.jbpm.executor.ExecutorServiceFactory"
